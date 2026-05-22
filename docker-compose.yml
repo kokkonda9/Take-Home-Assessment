@@ -1,0 +1,50 @@
+services:
+  account-service:
+    build: ./account-service
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: sqlite:////data/account.db
+    volumes:
+      - account-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  gateway-service:
+    build: ./gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      ACCOUNT_SERVICE_URL: http://account-service:8081
+      DATABASE_URL: sqlite:////data/gateway.db
+    depends_on:
+      account-service:
+        condition: service_healthy
+    volumes:
+      - gateway-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')",
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  account-data:
+  gateway-data:
